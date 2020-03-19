@@ -1,0 +1,33 @@
+input {
+  kafka {
+    bootstrap_servers => "172.18.226.150:9092"
+     topics_pattern => "elk-.*"
+    codec => "json"
+  }
+}
+filter {
+  grok  {
+    match => ["message","(?<produce_log_time>%{YEAR}-%{MONTHNUM}-%{MONTHDAY} %{TIME})\s+%{LOGLEVEL:log_level}\s+(?<thread_class_name>\[.*\])\s+(?<log_message>.*)"]
+    }
+  ruby {
+   code => '
+   arr = event.get("[log][file][path]").split("/")
+   event.set("service_name", arr[3].downcase)
+   '
+ }
+ mutate  {
+         remove_field => ["agent","agent","ecs","input","message"]
+
+  }
+}
+output {
+   stdout  {
+    codec => rubydebug
+   }
+  elasticsearch {
+    hosts => ["http://172.18.226.190:9200"]
+    index => "%{service_name}-%{+YYYY.MM.dd}"
+    user => "logstash_writer"
+    password => "V8wdiOLmI4sqAM1EXMvx"
+  }
+}
