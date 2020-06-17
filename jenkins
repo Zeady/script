@@ -1,0 +1,23 @@
+mvn clean package -Dmaven.test.skip=true -pl platform/$i  -am -DwsBuild.path.jar=$BASEDIR/targetjar -DwsBuild.path.zip=$BASEDIR/targetzip
+
+[ $? -eq 0 ] ||  echo 'mvn编译失败'
+
+mvn_package_name=`ls $BASEDIR/targetjar/*.jar|awk -F '/' '{print $8}'|awk -F'.' '{print $1}'`
+echo $mvn_package_name
+
+if [ "$mvn_package_name" = "$i" ]
+then
+    echo "mvn编译后包名与参数构建参数服务名称一致"
+else
+    echo "mvn编译后包名不符合规范"
+fi
+server_list=`cat /data/jenkins/data/workspace/service_server_list |grep $i|tr '-' ' '`
+echo  $server_list
+    for num in $server_list
+      do
+         if [ $num != $i ]
+         then
+            python /data/jenkins/data/workspace/deploy.py $i $num
+          fi
+      done
+done
